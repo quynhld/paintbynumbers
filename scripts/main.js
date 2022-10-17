@@ -3156,6 +3156,47 @@ define("gui", ["require", "exports", "common", "guiprocessmanager", "settings"],
         }
         return $(html);
     }
+    function rgb2cmyk (r,g,b) {
+        var computedC = 0;
+        var computedM = 0;
+        var computedY = 0;
+        var computedK = 0;
+       
+        //remove spaces from input RGB values, convert to int
+        var r = parseInt( (''+r).replace(/\s/g,''),10 ); 
+        var g = parseInt( (''+g).replace(/\s/g,''),10 ); 
+        var b = parseInt( (''+b).replace(/\s/g,''),10 ); 
+       
+        if ( r==null || g==null || b==null ||
+            isNaN(r) || isNaN(g)|| isNaN(b) )
+        {
+          console.log ('Please enter numeric RGB values!');
+          return;
+        }
+        if (r<0 || g<0 || b<0 || r>255 || g>255 || b>255) {
+          console.log ('RGB values must be in the range 0 to 255.');
+          return;
+        }
+       
+        // BLACK
+        if (r==0 && g==0 && b==0) {
+         computedK = 1;
+         return [0,0,0,1];
+        }
+       
+        computedC = 1 - (r/255);
+        computedM = 1 - (g/255);
+        computedY = 1 - (b/255);
+       
+        var minCMY = Math.min(computedC,
+                     Math.min(computedM,computedY));
+        computedC = Math.round((computedC - minCMY) / (1 - minCMY) * 100) ;
+        computedM = Math.round((computedM - minCMY) / (1 - minCMY) * 100) ;
+        computedY = Math.round((computedY - minCMY) / (1 - minCMY) * 100 );
+        computedK = Math.round(minCMY * 100);
+       
+        return {cc: computedC,cm: computedM,cy: computedY,ck: computedK};
+    }
     function downloadPalettePng() {
         if (processResult == null) {
             return;
@@ -3192,9 +3233,17 @@ define("gui", ["require", "exports", "common", "guiprocessmanager", "settings"],
             ctx.lineWidth = 1;
             ctx.font = "10px Tahoma";
             const rgbText = "RGB: " + Math.floor(color[0]) + "," + Math.floor(color[1]) + "," + Math.floor(color[2]);
+            // const { r, g, b } = color.rgb;
+            const { cc, cm, cy, ck } = rgb2cmyk(Math.floor(color[0]), Math.floor(color[1]) ,Math.floor(color[2]));
+            
+            //colorCMYK.style.backgroundColor = color.hexString;
+            // valuesCMYK.value = `cmyk(${cc}%, ${cm}%, ${cy}%, ${ck}%)`;
+            const CMYKText = (`${cc},${cm},${cy},${ck}`);
             const rgbTextSize = ctx.measureText(rgbText);
+            const CMYKTextSize = ctx.measureText(CMYKText);
             ctx.fillStyle = "black";
-            ctx.fillText(rgbText, x + cellWidth / 2 - rgbTextSize.width / 2, y + cellHeight - 10);
+            //ctx.fillText(rgbText+CMYKText, x + cellWidth / 2 - rgbTextSize.width / 2, y + cellHeight - 10);
+            ctx.fillText(CMYKText, x + cellWidth / 2 - CMYKTextSize.width / 2, y + cellHeight - 10);
         }
         const dataURL = canvas.toDataURL("image/png");
         const dl = document.createElement("a");
